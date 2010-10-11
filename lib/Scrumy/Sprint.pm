@@ -6,6 +6,7 @@ use Moose;
 use Carp qw(croak confess);
 
 use Scrumy::Story;
+use Scrumy::Snapshot;
 
 has 'api' => (
               is       => 'ro',
@@ -32,6 +33,12 @@ has 'stories' => (
                   is      => 'ro',
                   lazy    => 1,
                   builder => '_build_stories',
+                 );
+
+has 'snapshots' => (
+                  is      => 'ro',
+                  lazy    => 1,
+                  builder => '_build_snapshots',
                  );
 
 sub _build
@@ -88,6 +95,20 @@ sub _build_stories
     }
 
     return \@stories;
+}
+
+sub _build_snapshots
+{
+    my $self = shift;
+
+    my $response = $self->api->_call_api(path => 'sprints/' . $self->id . '/snapshots');
+
+    my @snapshots;
+    foreach my $snapshot (@$response) {
+        push(@snapshots, Scrumy::Snapshot->new(api => $self->api, %{$snapshot->{'snapshot'}}));
+    }
+
+    return \@snapshots;
 }
 
 no Moose;

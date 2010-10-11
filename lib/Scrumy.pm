@@ -10,7 +10,7 @@ use JSON qw(from_json);
 # objects created via API
 use Scrumy::Sprint;
 
-our $VERSION = '0.0.2';
+our $VERSION = '0.0.3';
 has 'project' => (
                   is       => 'rw',
                   isa      => 'Str',
