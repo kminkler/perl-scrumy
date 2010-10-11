@@ -1,81 +1,93 @@
-package Scrumy;
+package Scrumy::Sprint;
 
 use warnings;
 use strict;
-use LWP::UserAgent;
 use Moose;
 use Carp qw(croak confess);
-use JSON qw(from_json);
 
-# objects created via API
-use Scrumy::Sprint;
+use Scrumy::Story;
 
-our $VERSION = '0.0.2';
-has 'project' => (
-                  is       => 'rw',
-                  isa      => 'Str',
-                  required => 1,
-                 );
-
-has 'password' => (
-                   is       => 'rw',
-                   isa      => 'Str',
-                   required => 1,
-                  );
-has 'lwp' => (
-              is      => 'ro',
-              isa     => 'LWP::UserAgent',
-              default => sub { my $ua = LWP::UserAgent->new(); $ua->agent("perl-scrumy/$VERSION"); $ua; },
+has 'api' => (
+              is       => 'ro',
+              isa      => 'Scrumy',
+              required => 1,
              );
 
-has 'info' => (
-               is      => 'ro',
-               lazy    => 1,
-               builder => '_build_info',
-              );
+has 'id' => (
+             is       => 'ro',
+             isa      => 'Int',
+             required => 1,
+            );
 
-has 'sprints' => (
+foreach ('start_date', 'created_at', 'updated_at', 'scrumy_url') {
+    has $_ => (
+               is      => 'rw',
+               isa     => 'Str',
+               lazy    => 1,
+               builder => "_build_$_",
+              );
+}
+
+has 'stories' => (
                   is      => 'ro',
                   lazy    => 1,
-                  builder => '_build_sprints',
+                  builder => '_build_stories',
                  );
 
-sub _call_api
-{
-    my ($self, %options) = @_;
-
-    croak("Missing path") unless exists($options{'path'});
-
-    $self->lwp->credentials("scrumy.com:443", "Application", $self->project, $self->password);
-
-    my $response = $self->lwp->get('https://scrumy.com/api/' . $options{'path'} . '.json');
-
-    confess("Bad response code (" . $response->code() . ") from API") unless $response->is_success();
-
-    return from_json($response->content);
-}
-
-sub _build_info
+sub _build
 {
     my $self = shift;
 
-    my $response = $self->_call_api(path => 'scrumies/' . $self->project);
+    my $response = $self->api->_call_api(path => 'sprints/' . $self->id);
 
-    return $response->{'scrumy'};
+    $self->start_date($response->{'sprint'}{'start_date'});
+    $self->created_at($response->{'sprint'}{'created_at'});
+    $self->updated_at($response->{'sprint'}{'updated_at'});
+    $self->scrumy_url($response->{'sprint'}{'scrumy_url'});
+
+    return 0;
 }
 
-sub _build_sprints
+sub _build_start_date
+{
+    my $self = shift;
+    $self->_build;
+    return $self->start_date;
+}
+
+sub _build_created_at
+{
+    my $self = shift;
+    $self->_build;
+    return $self->created_at;
+}
+
+sub _build_updated_at
+{
+    my $self = shift;
+    $self->_build;
+    return $self->updated_at;
+}
+
+sub _build_scrumy_url
+{
+    my $self = shift;
+    $self->_build;
+    return $self->scrumy_url;
+}
+
+sub _build_stories
 {
     my $self = shift;
 
-    my $response = $self->_call_api(path => 'scrumies/' . $self->project . '/sprints');
+    my $response = $self->api->_call_api(path => 'sprints/' . $self->id . '/stories');
 
-    my @sprints;
-    foreach my $sprint (@$response) {
-        push(@sprints, Scrumy::Sprint->new(api => $self, %{$sprint->{'sprint'}}));
+    my @stories;
+    foreach my $story (@$response) {
+        push(@stories, Scrumy::Story->new(api => $self->api, %{$story->{'story'}}));
     }
 
-    return \@sprints;
+    return \@stories;
 }
 
 no Moose;
@@ -83,7 +95,7 @@ __PACKAGE__->meta->make_immutable;
 
 =head1 NAME
 
-Scrumy - A perl API to the Scrumy REST API
+Scrumy::Sprint - A Scrumy Sprint
 
 =head1 SYNOPSIS
 
@@ -107,19 +119,43 @@ foreach my $sprint (@{$project->sprints}) {
 
 =over 4
 
-=item sprints
+=item id
 
 =over 4
 
-Returns an array reference of Scrumy::Sprint objects.
+The scrumy sprint ID
 
 =back
 
-=item info
+=item start_date
 
 =over 4
 
-Returns a hash references of project info.
+The sprint start date
+
+=back
+
+=item created_at
+
+=over 4
+
+The sprint created time
+
+=back
+
+=item updated_at
+
+=over 4
+
+The sprint updated time
+
+=back
+
+=item scrumy_url
+
+=over 4
+
+The project name the sprint belongs to
 
 =back
 
@@ -153,4 +189,4 @@ THE SOFTWARE.
 
 =cut
 
-1;    # End of Scrumy
+1;    # End of Scrumy::Sprint
