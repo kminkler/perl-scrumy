@@ -29,7 +29,7 @@ sub _build
 {
     my $self = shift;
 
-    my $response = $self->api->_call_api(path => 'stories/' . $self->id);
+    my $response = $self->api->_call_api(path => 'tasks/' . $self->id);
 
     $self->story_id($response->{'task'}{'story_id'});
     $self->state($response->{'task'}{'state'});
