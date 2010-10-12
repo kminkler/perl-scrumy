@@ -7,10 +7,11 @@ use Moose;
 use Carp qw(croak confess);
 use JSON qw(from_json);
 
-# objects created via API
 use Scrumy::Sprint;
+use Scrumy::Story;
 
-our $VERSION = '0.0.3';
+our $VERSION = '0.1.0';
+
 has 'project' => (
                   is       => 'rw',
                   isa      => 'Str',
@@ -38,6 +39,12 @@ has 'sprints' => (
                   is      => 'ro',
                   lazy    => 1,
                   builder => '_build_sprints',
+                 );
+
+has 'backlog' => (
+                  is      => 'ro',
+                  lazy    => 1,
+                  builder => '_build_backlog',
                  );
 
 sub _call_api
@@ -76,6 +83,22 @@ sub _build_sprints
     }
 
     return \@sprints;
+}
+
+sub _build_backlog
+{
+	my $self = shift;
+
+	my $response = $self->_call_api(path => 'scrumies/' . $self->project . '/backlog');
+
+	my @stories;
+	foreach my $story (@$response) {
+		push(@stories, Scrumy::Story->new(api => $self, %{$story->{'story'}}));
+	}
+
+	@stories = sort { $b->priority <=> $a->priority } @stories;
+
+	return \@stories;
 }
 
 no Moose;
