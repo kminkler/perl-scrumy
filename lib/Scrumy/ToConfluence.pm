@@ -135,12 +135,11 @@ sub _create_sprint_page
 {chart}';
 
     $burndown .=
-      "{chart:type=timeSeries|dateFormat=yyyy-MM-dd|domainaxisrotateticklabel=true|title=Task Burndown|xLabel=Date|yLabel=Tasks Remaining|legend=true|height=300|width=600|dataOrientation=vertical|rangeAxisLowerBound=0|domainAxisUpperBound=$chart_limit}\n|| Date || Total Tasks || Tasks Remaining ||\n";
+      "{chart:type=timeSeries|dateFormat=yyyy-MM-dd|domainaxisrotateticklabel=true|title=Task Burndown|xLabel=Date|yLabel=Hours Remaining|legend=true|height=300|width=600|dataOrientation=vertical|rangeAxisLowerBound=0|domainAxisUpperBound=$chart_limit}\n|| Date || Total Hours || Hours Remaining ||\n";
     foreach my $snapshot (@{$sprint->snapshots}) {
         $burndown .=
           "|" . $snapshot->snapshot_date . "|" . $snapshot->hours_total . "|" . $snapshot->hours_remaining . "|\n";
     }
-    $burndown .= "|" . time2str("%Y-%m-%d", time()) . "|$tasks|" . ($tasks - $completed) . "|\n";
     $burndown .= "{chart}";
 
     $page->{'content'} =
