@@ -38,12 +38,12 @@ sub import_project
 
     my $project_parent = $self->_get_or_create_page($wiki, $parent, $self->project->project . " project");
 
-	my $backlog = "h3. Backlog\n{table-plus:sortColumn=1|sortDescending=true}\n||Priority||Description||\n";
-	foreach my $story (@{$self->project->backlog}) {
-		$backlog .= "|" . $story->priority . "|" . $story->title . "|\n";
-	}
-	$backlog .= "{table-plus}";
-		
+    my $backlog = "h3. Backlog\n||Priority||Description||\n";
+    foreach my $story (@{$self->project->backlog}) {
+        $backlog .= "|" . $story->priority . "|" . $story->title . "|\n";
+    }
+    $backlog .= "";
+
     $project_parent->{'content'} = 'This is the project container page for the ' . $self->project->project . ' page.
 
 This project is hosted at [Scrumy|http://www.scrumy.com], a web-based Scrum management tool.
@@ -53,29 +53,36 @@ if you have a login, you may visit the ['
       . ' scrumy project page|http://www.scrumy.com/'
       . $self->project->project
       . '] to view or change any sprint data.
-	
-h3. Sprints
+
+{excerpt}
 ';
 
-    use Data::Dumper;
     foreach my $sprint (@{$self->project->sprints}) {
         $project_parent->{'content'} .=
-            "* [Sprint starting "
-          . $sprint->start_date . "|"
+            "\nh3. Sprint Starting "
+          . $sprint->start_date . "\n"
+          . "[View Sprint Details|"
           . $self->project->project
           . " sprint "
           . $sprint->start_date . "]\n";
+        $project_parent->{'content'} .= "\n||Sequence||Description||\n";
+        foreach my $story (@{$sprint->stories}) {
+            $project_parent->{'content'} .= "|" . $story->seq . "|" . $story->title . "|\n";
+        }
+        $project_parent->{'content'} .= "";
     }
 
-    $project_parent->{'content'} .= "\n$backlog" . 
-      "\n{note}This page is automatically generated.  Any changes to this page will be reverted.{note}\n";
+    $project_parent->{'content'} .=
+        "\n$backlog"
+      . "\n{excerpt}"
+      . "\n{note}This page is automatically generated.  Any changes to this page will be reverted.{note}\n";
     my $result = $wiki->updatePage($project_parent);
 
     foreach my $sprint (@{$self->project->sprints}) {
         $self->_create_sprint_page($wiki, $sprint, $result, $self->project->project . " sprint " . $sprint->start_date);
     }
 
-	return 0;
+    return 0;
 }
 
 sub _create_sprint_page
@@ -114,7 +121,8 @@ sub _create_sprint_page
                 $completed++;
             }
             my ($owner, $title) =
-              map { my $tmp = $_; $tmp =~ s/\|/\\\|/; $tmp } ($task->scrumer ? $task->scrumer->{'name'} : ' ', $task->title);
+              map { my $tmp = $_; $tmp =~ s/\|/\\\|/; $tmp }
+              ($task->scrumer ? $task->scrumer->{'name'} : ' ', $task->title);
             $stories .= "|$owner|$status|$title|\n";
         }
         $stories .= "{table-plus}\n";
@@ -124,23 +132,23 @@ sub _create_sprint_page
 
     my $chart_limit = time2str("%Y-%m-%d", time() + (60 * 60 * 24 * 30));
 
-    my $burndown = 'Overall Progress:
-{chart:type=bar|colors=red,yellow,blue,green|orientation=horizontal|stacked=true|height=150|width=600|dataOrientation=vertical}
-| | Not Started | In Progress | Verification | Completed |
-| | '
+    my $burndown =
+        "\n{excerpt}\nSprint Progress:\n"
+      . "{chart:type=bar|colors=red,yellow,blue,green|orientation=horizontal|stacked=true|height=150|width=400|dataOrientation=vertical}\n"
+      . "| | Not Started | In Progress | Verification | Completed |\n" . "| | "
       . $counts->{'Not Started'} . ' | '
       . $counts->{'In Progress'} . ' | '
       . $counts->{'Verification'} . ' | '
-      . $counts->{'Completed'} . ' |
-{chart}';
+      . $counts->{'Completed'} . ' | '
+      . "\n{chart}\n";
 
     $burndown .=
-      "{chart:type=timeSeries|dateFormat=yyyy-MM-dd|domainaxisrotateticklabel=true|title=Task Burndown|xLabel=Date|yLabel=Hours Remaining|legend=true|height=300|width=600|dataOrientation=vertical|rangeAxisLowerBound=0|domainAxisUpperBound=$chart_limit}\n|| Date || Total Hours || Hours Remaining ||\n";
+      "\n{chart:type=timeSeries|dateFormat=yyyy-MM-dd|domainaxisrotateticklabel=true|title=Task Burndown|xLabel=Date|yLabel=Hours Remaining|legend=true|height=300|width=400|dataOrientation=vertical|rangeAxisLowerBound=0|domainAxisUpperBound=$chart_limit}\n|| Date || Total Hours || Hours Remaining ||\n";
     foreach my $snapshot (@{$sprint->snapshots}) {
         $burndown .=
           "|" . $snapshot->snapshot_date . "|" . $snapshot->hours_total . "|" . $snapshot->hours_remaining . "|\n";
     }
-    $burndown .= "{chart}";
+    $burndown .= "\n{chart}\n{excerpt}\n";
 
     $page->{'content'} =
       "This project is managed at scrumy.  Do not edit this page, visit [The project page at scrumy|http://scrumy.com/"
